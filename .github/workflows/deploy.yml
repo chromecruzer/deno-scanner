@@ -31,9 +31,12 @@ jobs:
       - name: Install step
         run: "deno task build"
 
+      - name: Build step
+        run: "deno run --allow-net --allow-read https://deno.land/std/http/file_server.ts --dist=."
+
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
           project: "nethra"
-          entrypoint: "dist/index.html"
+          entrypoint: ""
           root: "./"
