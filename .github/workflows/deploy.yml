@@ -24,11 +24,11 @@ jobs:
           deno-version: v1.x
 
       - name: Build step
-        run: "deno task dev"
+        run: "deno task build"
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "chromecruze-deno-scanne-76"
-          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
+          project: "nethra"
+          entrypoint: "https://deno.land/std@0.220.0/http/file_server.ts dist"
           root: "./"
