@@ -23,12 +23,20 @@ jobs:
         with:
           deno-version: v1.x
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install step
+        run: "npm install"
+
       - name: Build step
-        run: "deno task build"
+        run: "npm run build"
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "pucker"
-          entrypoint: "https://deno.land/std@0.217.0/http/file_server.js"
-          root: "src"
+          project: "chromecruze-deno-scanne-76"
+          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
+          root: "./"
