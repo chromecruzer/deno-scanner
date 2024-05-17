@@ -1,0 +1,16 @@
+# Test the POST endpoint
+
+POST http://localhost:7200
+Content-Type: application/json
+
+{
+  "name": "Sarrata",
+  "gender": "Female",
+  "experience": -5
+}
+
+###
+
+# Test the GET endpoint
+
+GET http://localhost:7200/home

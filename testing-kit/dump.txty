@@ -1,0 +1,114 @@
+import { opine, json } from "https://deno.land/x/opine@2.3.4/mod.ts";
+import { join } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { renderToString } from "https://esm.sh/react-dom@17.0.2/server";
+import React from "https://esm.sh/react@17.0.2";
+//import { compileFile } from "https://deno.land/x/pug@v0.1.6/mod.ts";
+import App from "./src/App.jsx"
+
+const app = opine();
+const PORT = 7100;
+
+// Use the JSON middleware to parse JSON request bodies
+app.use(json());
+
+// Set Pug as the view engine
+//app.set("view engine", "pug");
+
+// Initialize Deno KV with the correct flag
+const kv = await Deno.openKv("https://api.deno.com/databases/f9dd4231-d182-4f9b-89a2-db53b4765526/connect");
+
+// Prepopulate the KV store
+const user = { name: "Ramya", age: 11 };
+await kv.set(["users", "Ramya"], user);
+
+// CORS
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Or specify your frontend's origin
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
+
+
+// Log the fetched data
+const fetchedUsers = [];
+for await (const entry of kv.list({ prefix: ["users"] })) {
+  fetchedUsers.push(entry.value);
+}
+console.log("Fetched users:", fetchedUsers);
+
+async function getAllUsers() {
+  const users = [];
+  for await (const entry of kv.list({ prefix: ["users"] })) {
+    users.push(entry.value);
+  }
+  return users;
+}
+
+app.get("/", async (req, res) => {
+  const appHtml = renderToString(<App />);    
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Deno SSR with React</title>
+        <link rel="icon" type="image/svg+xml" href="https://denolib.github.io/high-res-deno-logo/deno_hr_circle.png">
+        <link rel="stylesheet" type="text/css" href="/static/client.css">
+      </head>
+      <body>
+        <div id="root">${appHtml}</div>
+        <script type="module" src="/static/client.js"></script>
+      </body>
+    </html>
+  `;
+  res.setHeader("Content-Type", "text/html; charset=UTF-8");
+ // const compiledFunction = compileFile("index.pug");
+ // const html = compiledFunction({ appHtml });
+  res.send(html);
+  //res.render("index", { appHtml }); // Render the "index" view (Pug template) with appHtml as data
+});
+
+// Rest of the server setup...
+
+
+app.post("/", async (req, res) => {
+  try {
+    console.log("Received request body:", req.body); // Debug log
+    const { name, gender, experience } = req.body;
+
+    if (!name || !gender || !experience) {
+      res.setStatus(400).json({ error: "Missing fields" });
+      return;
+    }
+
+    const user = { name, gender, experience: Number(experience) };
+    await kv.set(["users", name], user);
+    const users = await getAllUsers();
+    res.setHeader("Content-Type", "application/json");
+    res.send(JSON.stringify(users));
+  } catch (error) {
+    console.error("Error:", error);
+    res.setStatus(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/static/client.js", (req, res) => {
+  const path = join(Deno.cwd(), "static", "client.js");
+  res.sendFile(path).catch((error) => {
+    console.error("Error sending file:", error);
+    res.setStatus(404).send("File not found");
+  });
+});
+
+app.get("/static/client.css", (req, res) => {
+  const path = join(Deno.cwd(), "static", "client.css");
+  res.sendFile(path).catch((error) => {
+    console.error("Error sending file:", error);
+    res.setStatus(404).send("File not found");
+  });
+});
+
+app.listen(PORT);
+console.log(`Server running on http://localhost:${PORT}`);
